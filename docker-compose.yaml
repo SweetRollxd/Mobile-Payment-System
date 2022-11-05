@@ -1,0 +1,22 @@
+version: '0.1'
+
+services:
+    pg_db:
+        image: postgres:14.5
+        environment:
+            POSTGRES_DB: "appdb"
+            POSTGRES_USER: "sukharik"
+            POSTGRES_PASSWORD: "mypass"
+            POSTGRES_HOST_AUTH_METHOD: "md5"
+            POSTGRES_INITDB_ARGS: "--auth=md5"
+        ports:
+            - 127.0.0.1:5432:5432
+        volumes:
+            - ./migration_scripts:/docker-entrypoint-initdb.d
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U sukharik -d appdb"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 10s
+        restart: unless-stopped
