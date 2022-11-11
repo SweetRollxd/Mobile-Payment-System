@@ -2,6 +2,7 @@ from flask_sqlalchemy import SQLAlchemy
 import sqlalchemy as sa
 from sqlalchemy.orm import relationship
 from datetime import datetime
+# from extra_functions import get_datetime
 
 db = SQLAlchemy()
 
@@ -13,8 +14,10 @@ class User(db.Model):
     passwd = sa.Column(sa.String, nullable=False)
     firstname = sa.Column(sa.String)
     lastname = sa.Column(sa.String)
-    created = sa.Column(sa.DateTime, nullable=False, default=datetime.now())
-    updated = sa.Column(sa.DateTime)
+    created_at = sa.Column(sa.DateTime, nullable=False, default=datetime.now())
+    updated_at = sa.Column(sa.DateTime)
+    deleted = sa.Column(sa.Boolean, nullable=False, default=False)
+    deleted_at = sa.Column(sa.DateTime)
 
     __table_args__ = (
         sa.CheckConstraint("length(phone) = 10 and phone ~ '^\d+$'"),
@@ -30,8 +33,10 @@ class Product(db.Model):
     price = sa.Column(sa.Numeric, nullable=False)
     description = sa.Column(sa.String)
     params = sa.Column(sa.JSON)
-    created = sa.Column(sa.DateTime, nullable=False, default=datetime.now())
-    updated = sa.Column(sa.DateTime)
+    created_at = sa.Column(sa.DateTime, nullable=False, default=datetime.now())
+    updated_at = sa.Column(sa.DateTime)
+    deleted = sa.Column(sa.Boolean, nullable=False, default=False)
+    deleted_at = sa.Column(sa.DateTime)
 
 
 class State(db.Model):

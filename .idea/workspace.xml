@@ -4,6 +4,7 @@
     <list default="true" id="ba10b57e-7e0e-44f8-86ab-95682d6a4216" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/models.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/requests.sh" beforeDir="false" afterPath="$PROJECT_DIR$/requests.sh" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
