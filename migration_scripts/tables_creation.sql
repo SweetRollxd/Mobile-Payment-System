@@ -1,3 +1,4 @@
+/*
 create table appuser (
   appuser_id serial primary key,
   phone char(11) not null,
@@ -53,3 +54,4 @@ insert into state_dict values
 (1, 'В обработке'),
 (2, 'Оплачено')
 ;
+*/
