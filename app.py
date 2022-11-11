@@ -70,19 +70,18 @@ def product(product_id):
     prod = Product.query.get_or_404(product_id)
     if request.method == "GET":
         return model_as_dict(prod)
-        # return model_as_dict(Product.query.get(product_id))
 
     elif request.method == "PATCH":
         changed_data = request.json
-        prod.update(changed_data)
-        # db.session.query(Product).filter(Product.id == product_id)\
-        #     .update(changed_data)
+        db.session.query(Product).filter(Product.product_id == product_id)\
+            .update(changed_data)
         db.session.commit()
-        return Product.query.get_or_404(product_id)
+        return {"product_id": product_id}
     else:
-        db.session.query(Product).filter(Product.id == product_id)\
+        db.session.query(Product).filter(Product.product_id == product_id)\
             .delete()
-    return {"msg": "Not ready yet"}, 404
+        db.session.commit()
+        return {"product_id": product_id}
 
 
 @app.route("/users", methods=["POST"])
