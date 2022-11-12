@@ -5,7 +5,7 @@ from datetime import datetime
 import hashlib
 import json
 
-from models import db, User, Product, Purchase, ShoppingCart, FinanceLog, State
+from models import db, User, Product, Purchase, ProductsInPurchase, ShoppingCart, FinanceLog, State
 
 app = Flask(__name__)
 
@@ -47,11 +47,11 @@ def login():
 @app.route("/products", methods=["GET", "POST"])
 def products():
     if request.method == "GET":
-        product_list = Product.query.all()
-        print(product_list)
+        product_list = Product.query.filter(Product.deleted == False).all()
+        # print(product_list)
         response = []
         for i, prod in enumerate(product_list):
-            print(model_as_dict(prod))
+            # print(model_as_dict(prod))
             response.append(model_as_dict(prod))
         return response
 
@@ -93,7 +93,7 @@ def users():
     new_user = User(phone=user_data["phone"],
                     passwd=hashlib.sha256(user_data["password"].encode()).hexdigest(),
                     firstname=user_data["firstname"],
-                    lastname=user_data["lastname"])
+                    surname=user_data["surname"])
     db.session.add(new_user)
     db.session.commit()
     return {"user_id": new_user.appuser_id}
@@ -101,11 +101,11 @@ def users():
 
 @app.route("/users/<int:user_id>", methods=["GET", "PATCH", "DELETE"])
 def user(user_id):
-    prod = User.query.filter(User.appuser_id == user_id, User.deleted == False).first_or_404()
+    usr = User.query.filter(User.appuser_id == user_id, User.deleted == False).first_or_404()
     if request.method == "GET":
-        prod = model_as_dict(prod)
-        prod.pop("passwd")
-        return prod
+        usr = model_as_dict(usr)
+        usr.pop("passwd")
+        return usr
 
     elif request.method == "PATCH":
         changed_data = request.json
@@ -127,17 +127,67 @@ def user(user_id):
 
 @app.route("/users/<int:user_id>/cart", methods=["GET", "POST", "DELETE"])
 def shop_cart(user_id):
-    return {"msg": "Not ready yet"}, 404
+    usr = User.query.filter(User.appuser_id == user_id, User.deleted == False).first_or_404()
+    if request.method == "GET":
+        cart_list = []
+        products_in_cart = db.session.query(Product, ShoppingCart.quantity).join(ShoppingCart.products).filter(ShoppingCart.appuser_id == user_id).all()
+        for i, prod in enumerate(products_in_cart):
+            prod_data = model_as_dict(prod[0])
+            prod_data["quantity"] = prod[1]
+            cart_list.append(prod_data)
+
+        return cart_list
+
+    elif request.method == "POST":
+        product_id = request.json["product_id"]
+        quantity = request.json["quantity"]
+        # TODO: исправить 404 ошибку на 400
+        prod = Product.query.filter(Product.product_id == product_id, Product.deleted == False).first_or_404()
+
+        # если в корзине пользователя уже есть такой товар, то добавить количество к уже имеющемуся
+        if ShoppingCart.query.filter(ShoppingCart.product_id == product_id, ShoppingCart.appuser_id == user_id).first() is not None:
+            db.session.query(ShoppingCart).filter(ShoppingCart.appuser_id == user_id, ShoppingCart.product_id == product_id) \
+                .update({"quantity": ShoppingCart.quantity + quantity})
+        # иначе добавляем товар в корзину
+        else:
+            new_item = ShoppingCart(appuser_id=user_id, product_id=product_id, quantity=quantity)
+            db.session.add(new_item)
+
+        db.session.commit()
+        return model_as_dict(prod)
+
+    else:
+        product_ids = usr.clear_cart()
+        db.session.commit()
+        return {"product_ids": product_ids}
 
 
 @app.route("/users/<int:user_id>/cart/<int:product_id>", methods=["DELETE"])
 def delete_product_in_cart(user_id, product_id):
-    return {"msg": "Not ready yet"}, 404
+    usr = User.query.filter(User.appuser_id == user_id, User.deleted == False).first_or_404()
+    prod = ShoppingCart.query.filter(ShoppingCart.appuser_id == user_id, ShoppingCart.product_id == product_id).first_or_404()
+    db.session.query(ShoppingCart).filter(ShoppingCart.appuser_id == user_id, ShoppingCart.product_id == product_id) \
+        .delete()
+    db.session.commit()
+    return model_as_dict(prod)
 
 
 @app.route("/users/<int:user_id>/purchases", methods=["POST"])
-def pay_pruchase(user_id):
-    return {"msg": "Not ready yet"}, 404
+def pay_purchase(user_id):
+    usr = User.query.filter(User.appuser_id == user_id, User.deleted == False).first_or_404()
+    products_in_cart = usr.clear_cart()
+    print(products_in_cart)
+    new_purchase = Purchase(appuser_id=user_id)
+
+    for product in products_in_cart:
+        pp_record = ProductsInPurchase(quantity=product["quantity"])
+        pp_record.product = Product.query.get(product["product_id"])
+        new_purchase.products.append(pp_record)
+    # TODO: добавить списание со счета абонента
+    # TODO: добавить проверку на положительный баланс
+    db.session.add(new_purchase)
+    db.session.commit()
+    return {"purchase_id": new_purchase.purchase_id}
 
 
 @app.route("/users/<int:user_id>/deposit", methods=["POST"])
