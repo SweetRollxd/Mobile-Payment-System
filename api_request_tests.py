@@ -44,6 +44,13 @@ def random_string(length):
     return "".join(random.choice(letters) for i in range(length))
 
 
+def print_response(response):
+    if response.status_code not in (200, 201):
+        print(f"Status code {response.status_code}. Response: {response.text}")
+    else:
+        print(json.loads(response.text))
+
+
 def create_product(price, desc, params):
     data = {
         "price": price,
@@ -85,14 +92,14 @@ def add_to_cart(user_id, product_id, quantity):
 
 # user_id = create_user(random_phone(), random_string(8), random.choice(names), random.choice(surnames))
 # print(f"Added user ID: {user_id}")
-#
+
 #
 # products = requests.get(f"{socket}/products").json()
 # product_ids = []
 # for product in products:
 #     product_ids.append(product["product_id"])
 # product_id = random.choice(product_ids)
-# res = add_to_cart(user_id=4, product_id=product_id, quantity=random.randrange(1, 100))
+# res = add_to_cart(user_id=5, product_id=product_id, quantity=random.randrange(1, 100))
 # print(f"Added to Cart: {res}")
 #
 #
@@ -106,9 +113,13 @@ def add_to_cart(user_id, product_id, quantity):
 # response = requests.delete(f"{socket}/users/{4}/cart")
 # print(f"Cart cleared. Deleted products: {json.loads(response.text)}")
 
+response = requests.post(f"{socket}/users/{5}/purchases")
+print_response(response)
 
-response = requests.post(f"{socket}/users/{4}/purchases")
-print(f"Purchasing. Response: {json.loads(response.text)}")
+# money = round(random.random() * 100000, 2)
+# print(money)
+# response = requests.post(f"{socket}/users/{100}/deposit", json={"amount": money})
+# print_response(response)
 
 # kek
 # for test in tests:

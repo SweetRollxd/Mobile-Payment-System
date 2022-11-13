@@ -2,6 +2,7 @@ from flask import Flask, request
 from alembic.config import Config as alembic_Config
 from alembic import command as alembic_cmd
 from datetime import datetime
+from decimal import Decimal
 import hashlib
 import json
 
@@ -48,10 +49,8 @@ def login():
 def products():
     if request.method == "GET":
         product_list = Product.query.filter(Product.deleted == False).all()
-        # print(product_list)
         response = []
         for i, prod in enumerate(product_list):
-            # print(model_as_dict(prod))
             response.append(model_as_dict(prod))
         return response
 
@@ -63,7 +62,7 @@ def products():
 
         db.session.add(new_product)
         db.session.commit()
-        return {"product_id": new_product.product_id}
+        return {"product_id": new_product.product_id}, 201
 
 
 @app.route("/products/<int:product_id>", methods=["GET", "PATCH", "DELETE"])
@@ -74,7 +73,6 @@ def product(product_id):
 
     elif request.method == "PATCH":
         changed_data = request.json
-        changed_data["updated_at"] = get_datetime(datetime.now())
         db.session.query(Product).filter(Product.product_id == product_id) \
             .update(changed_data)
         db.session.commit()
@@ -96,7 +94,7 @@ def users():
                     surname=user_data["surname"])
     db.session.add(new_user)
     db.session.commit()
-    return {"user_id": new_user.appuser_id}
+    return {"user_id": new_user.appuser_id}, 201
 
 
 @app.route("/users/<int:user_id>", methods=["GET", "PATCH", "DELETE"])
@@ -109,7 +107,6 @@ def user(user_id):
 
     elif request.method == "PATCH":
         changed_data = request.json
-        changed_data["updated_at"] = get_datetime(datetime.now())
         if "password" in changed_data:
             changed_data["passwd"] = hashlib.sha256(changed_data["password"].encode()).hexdigest()
             changed_data.pop("password")
@@ -131,6 +128,8 @@ def shop_cart(user_id):
     if request.method == "GET":
         cart_list = []
         products_in_cart = db.session.query(Product, ShoppingCart.quantity).join(ShoppingCart.products).filter(ShoppingCart.appuser_id == user_id).all()
+        if not products_in_cart:
+            return [], 204
         for i, prod in enumerate(products_in_cart):
             prod_data = model_as_dict(prod[0])
             prod_data["quantity"] = prod[1]
@@ -176,28 +175,50 @@ def delete_product_in_cart(user_id, product_id):
 def pay_purchase(user_id):
     usr = User.query.filter(User.appuser_id == user_id, User.deleted == False).first_or_404()
     products_in_cart = usr.clear_cart()
-    print(products_in_cart)
-    new_purchase = Purchase(appuser_id=user_id)
-
+    if not products_in_cart:
+        return [], 204
+    # print(products_in_cart)
+    new_purchase = Purchase(appuser_id=user_id, purchase_state=1)
+    total = 0
     for product in products_in_cart:
         pp_record = ProductsInPurchase(quantity=product["quantity"])
         pp_record.product = Product.query.get(product["product_id"])
+        # print(f"Price: {pp_record.product.price}")
+        total += pp_record.product.price * pp_record.quantity
         new_purchase.products.append(pp_record)
-    # TODO: добавить списание со счета абонента
-    # TODO: добавить проверку на положительный баланс
+
+    print(f"Total: {total}, User balance: {usr.balance}")
+    if usr.balance < total:
+        return {"msg": "Insufficient Funds"}, 400
+    new_purchase.total = total
+    transact = FinanceLog(appuser_id=user_id, debet=total, saldo=usr.balance)
+    new_purchase.transaction.append(transact)
+
+    User.query.filter(User.appuser_id == user_id).update({"balance": User.balance - total})
     db.session.add(new_purchase)
+
     db.session.commit()
-    return {"purchase_id": new_purchase.purchase_id}
+    return {"purchase_id": new_purchase.purchase_id}, 201
 
 
 @app.route("/users/<int:user_id>/deposit", methods=["POST"])
 def deposit(user_id):
-    return {"msg": "Not ready yet"}, 404
+    usr = User.query.filter(User.appuser_id == user_id, User.deleted == False).first_or_404()
+    credit = Decimal(str(request.json["amount"]))
+    transact = FinanceLog(appuser_id=user_id, credit=credit, saldo=usr.balance)
+    User.query.filter(User.appuser_id == user_id).update({"balance": User.balance + credit})
+    db.session.add(transact)
+    db.session.commit()
+    return {"balance": usr.balance}
 
 
 @app.route("/users/<int:user_id>/history", methods=["GET"])
 def user_history(user_id):
-    return {"msg": "Not ready yet"}, 404
+    usr = User.query.filter(User.appuser_id == user_id, User.deleted == False).first_or_404()
+    response = []
+    for i, transact in enumerate(usr.transactions):
+        response.append(model_as_dict(transact))
+    return response
 
 
 if __name__ == '__main__':
