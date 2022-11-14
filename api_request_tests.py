@@ -3,8 +3,10 @@ import random
 import json
 import string
 
-host = "http://127.0.0.1"
-port = 5000
+# host = "http://127.0.0.1"
+# port = 5000
+host = "http://217.71.129.139"
+port = 4428
 socket = f"{host}:{port}"
 
 names = ("Арина","София","Арсений","Алексей","Евгений","Денис","Василиса","Александра","Дмитрий","Ева")
@@ -118,7 +120,7 @@ print_response(response)
 
 # money = round(random.random() * 100000, 2)
 # print(money)
-# response = requests.post(f"{socket}/users/{100}/deposit", json={"amount": money})
+# response = requests.post(f"{socket}/users/{5}/deposit", json={"amount": money})
 # print_response(response)
 
 # kek
